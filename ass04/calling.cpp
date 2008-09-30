@@ -22,6 +22,7 @@ class Student
 {
 public:
 	Student(int ID):id(ID){adjList = new set<int>();group=new int(-1);}
+	~Student(){delete adjList;}
 	int id;
 	int *group;
 	set<int>* adjList;
