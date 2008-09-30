@@ -9,8 +9,6 @@
 #include <set>
 using namespace std;
 
-list<int> adjList;
-
 class Edge
 {
 public:
