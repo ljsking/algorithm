@@ -13,13 +13,14 @@ typedef vector<Vertex> Vertices;
 class Vertex
 {
 public:
-	Vertex():pre(0), post(0), low(0)
+	Vertex():pre(0), post(0), low(0), erased(false)
 	{
 	}
 	
-	Vertex(const Vertex &other):pre(other.pre),post(other.post), low(other.low)
+	Vertex(const Vertex &other):pre(other.pre),post(other.post), low(other.low), erased(other.erased)
 	{
-		copy(other.adjList.begin(), other.adjList.end(), adjList.begin());
+		if(other.adjList.size()>0)
+			copy(other.adjList.begin(), other.adjList.end(), adjList.begin());
 	}
 	
 	void insert(int vertex)
@@ -31,6 +32,8 @@ public:
 	int getPost(){return post;}
 	void setPre(int Pre){ pre = Pre; }
 	void setPost(int Post){ post = Post; }
+	void erase(){ erased = true; adjList.clear(); }
+	bool isErased() { return erased; }
 	Vertices::iterator next(Vertices &vertices)
 	{
 		list<int>::iterator next = adjList.begin();
@@ -42,17 +45,17 @@ public:
 	}
 	void print(ostream &o) const
 	{
-		o<<"pre: "<<pre<<", post: "<<post<<" List:";
-		for(list<int>::const_iterator it=adjList.begin(); it!=adjList.end(); it++)
-			o<<(*it)<<" ";
+		if(erased)
+			o<<"deleted";
+		else{
+			o<<"pre: "<<pre<<", post: "<<post<<" List:";
+			for(list<int>::const_iterator it=adjList.begin(); it!=adjList.end(); it++)
+				o<<(*it)<<" ";
+		}
 	}
 	list<int>::const_iterator begin() const {return adjList.begin();}
 	list<int>::const_iterator end() const {return adjList.end();}
-	void eraseAll()
-	{
-		adjList.clear();
-	}
-	void erase(int vertex)
+	void eraseAdj(int vertex)
 	{
 		for(list<int>::iterator it = adjList.begin();it!=adjList.end();)
 		{
@@ -74,6 +77,7 @@ public:
 private:
 	list< int > adjList;
 	int pre, post, low;
+	bool erased;
 };
 
 ostream& operator<< (ostream& o, const Vertex& v)
@@ -146,13 +150,18 @@ num pre post
 */
 int DFS(Vertices &vertices)
 {
-	stack< Vertices::iterator > st;
-	int index = 1;
-	int rz;
 	for(Vertices::iterator iter = vertices.begin(); 
 				iter!=vertices.end(); iter++)
 	{
-		if(iter->getPre()) continue;
+		iter->setPre(0); iter->setPost(0);
+	}
+	stack< Vertices::iterator > st;
+	int index = 1;
+	int rz = -1;
+	for(Vertices::iterator iter = vertices.begin(); 
+				iter!=vertices.end(); iter++)
+	{
+		if(iter->isErased() || iter->getPre()) continue;
 		digg(iter, vertices, index, st);
 		while(st.size())
 		{
@@ -189,11 +198,13 @@ int DFS(Vertices &vertices)
 void reverse(Vertices &reversed, Vertices &vertices)
 {
 	for(Vertices::iterator iter = vertices.begin(); iter!=vertices.end(); iter++)
-		reversed.push_back(Vertex());
-	for(Vertices::iterator iter = vertices.begin(); iter!=vertices.end(); iter++)
 	{
-		for(list<int>::const_iterator it = iter->begin(); it!=iter->end(); it++)
-			reversed[*it].insert(iter-vertices.begin());
+		if(iter->isErased())
+			reversed[iter-vertices.begin()].erase();
+		else
+			for(list<int>::const_iterator it = iter->begin(); it!=iter->end(); it++){
+				reversed[*it].insert(iter-vertices.begin());
+			}
 	}
 }
 
@@ -218,9 +229,9 @@ void reverse(Vertices &reversed, Vertices &vertices)
 */
 void erase(int vertex, Vertices &vertices)
 {
-	vertices[vertex].eraseAll();
+	vertices[vertex].erase();
 	for(Vertices::iterator iter = vertices.begin(); iter!=vertices.end(); iter++)
-		iter->erase(vertex);
+		iter->eraseAdj(vertex);
 }
 
 void print(Vertices &vs)
@@ -240,7 +251,6 @@ int deleteSinkCompleteNode(int sink, Vertices &vertices)
 	stack< Vertices::iterator > st;
 	int leader = sink;
 	int index = 1;
-	int rz;
 	Vertices::iterator iter = vertices.begin()+sink;
 	digg(iter, vertices, index, st);
 	while(st.size())
@@ -252,22 +262,28 @@ int deleteSinkCompleteNode(int sink, Vertices &vertices)
 		top->setPost(index++);
 		deleteNodes.push_back(top-vertices.begin());
 		leader = max(leader, top-vertices.begin());
-		rz = top-vertices.begin();
 	}
-	return rz;
+	for(vector<int>::iterator it = deleteNodes.begin(); it!=deleteNodes.end(); it++)
+		erase(*it, vertices);
+	return leader;
+}
+
+int getSinkNode(Vertices &vertices)
+{
+	Vertices reversed(vertices.size());
+	reverse(reversed, vertices);
+	return DFS(reversed);
 }
 
 int main()
 {
 	Vertices vertices;
-	Vertices reversed;
 	setUp(vertices);
-	reverse(reversed, vertices);
-	int source = DFS(reversed);
-	int leader = deleteSinkCompleteNode(source, vertices);
-	cout<<"sink node is "<<source<<endl;
-	cout<<"leader of deleted nodes is "<<leader<<endl;
-	erase(source, vertices);
-	print(vertices);
+	int sink = 0;
+	while((sink=getSinkNode(vertices))!=-1)
+	{
+		int leader = deleteSinkCompleteNode(sink, vertices);
+		cout<<"leader of deleted nodes is "<<leader<<endl;
+	}
 	return 0;
 }
