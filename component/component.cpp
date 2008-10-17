@@ -4,6 +4,7 @@
 #include <stack>
 #include <iostream>
 #include <ostream>
+#include <fstream>
 
 using namespace std;
 
@@ -96,27 +97,22 @@ ostream& operator<< (ostream& o, const Vertex& v)
 7 5 0
 8 1 0
 */
-void setUp(Vertices &vertices)
+void read(Vertices &vertices)
 {
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	
-	/*make adjList*/
-	vertices[0].insert(3-1);
-	vertices[1].insert(1-1);
-	vertices[2].insert(8-1);
-	vertices[2].insert(4-1);
-	vertices[3].insert(6-1);
-	vertices[4].insert(4-1);
-	vertices[5].insert(7-1);
-	vertices[6].insert(5-1);
-	vertices[7].insert(1-1);
+	ifstream ifs("component.inp");
+	int size, tmp;
+	ifs>>size;
+	vertices.resize(size);
+	for(int i = 0; i<size; i++)
+	{
+		ifs>>tmp;
+		while(tmp!=0)
+		{
+			vertices[i].insert(tmp-1);
+			ifs>>tmp;
+		}
+	}
+	ifs.close();
 }
 
 void digg(Vertices::iterator iter, Vertices &vertices, int &pre, stack<Vertices::iterator> &st)
@@ -129,25 +125,6 @@ void digg(Vertices::iterator iter, Vertices &vertices, int &pre, stack<Vertices:
 	}
 }
 
-/*
-1 3 0
-2 1 0
-3 8 4 0
-4 6 0
-5 4 0
-6 7 0
-7 5 0
-8 1 0
-num pre post
-1	1	14
-2	15	16
-3	2	13
-4	5	12
-5	8	9
-6	6	11
-7	7	10
-8	3	4
-*/
 int DFS(Vertices &vertices)
 {
 	for(Vertices::iterator iter = vertices.begin(); 
@@ -176,25 +153,6 @@ int DFS(Vertices &vertices)
 	return rz;
 }
 
-/*
-1 3 0
-2 1 0
-3 8 4 0
-4 6 0
-5 4 0
-6 7 0
-7 5 0
-8 1 0
-
-1 2 8
-2
-3 1
-4 3 5
-5 7
-6 4
-7 6
-8 3
-*/
 void reverse(Vertices &reversed, Vertices &vertices)
 {
 	for(Vertices::iterator iter = vertices.begin(); iter!=vertices.end(); iter++)
@@ -208,25 +166,6 @@ void reverse(Vertices &reversed, Vertices &vertices)
 	}
 }
 
-/*
-1 3 0
-2 1 0
-3 8 4 0
-4 6 0
-5 4 0
-6 7 0
-7 5 0
-8 1 0
-
-1 3
-2
-3 8 4
-4 6 
-5 4
-6 7
-7 5
-8 0
-*/
 void erase(int vertex, Vertices &vertices)
 {
 	vertices[vertex].erase();
@@ -278,12 +217,16 @@ int getSinkNode(Vertices &vertices)
 int main()
 {
 	Vertices vertices;
-	setUp(vertices);
+	read(vertices);
 	int sink = 0;
+	vector<int> results;
 	while((sink=getSinkNode(vertices))!=-1)
-	{
-		int leader = deleteSinkCompleteNode(sink, vertices);
-		cout<<"leader of deleted nodes is "<<leader<<endl;
-	}
+		results.push_back(deleteSinkCompleteNode(sink, vertices)+1);
+	sort(results.begin(), results.end());
+	ofstream ofs("component.out");
+	for(vector<int>::iterator it = results.begin(); it!=results.end()-1; it++)
+		ofs<<*it<<" ";
+	ofs<<*(results.end()-1);
+	ofs.close();
 	return 0;
 }
